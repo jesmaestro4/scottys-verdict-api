@@ -1,0 +1,660 @@
+openapi: 3.0.0
+info:
+  title: 'Scotty Verdict API'
+  description: 'Laravel API for Scotty car verdicts, cached vehicle enrichment, and nearby private-party listings.'
+  version: 1.0.0
+servers:
+  -
+    url: 'http://localhost:8000'
+    description: 'Local development server'
+paths:
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 'Authenticate a user with Laravel Sanctum cookie auth.'
+      operationId: dd51a484b7fa0f97c7680fdbde14cf5f
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                remember:
+                  type: boolean
+              type: object
+      responses:
+        200:
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        422:
+          description: 'Validation error.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/auth/me:
+    get:
+      tags:
+        - Auth
+      summary: 'Return the current authenticated user.'
+      operationId: b5de204f5e452ef51327c691aa99e77c
+      responses:
+        200:
+          description: 'Authenticated user.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  /api/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 'Logout the current user and invalidate the session.'
+      operationId: df9bdc6c7a6d9f20b983526b2ec0f698
+      responses:
+        204:
+          description: 'Logged out.'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  '/api/images/{carGuid}/{imageId}':
+    get:
+      tags:
+        - Images
+      summary: 'Fetch and cache a car image with automatic signed URL refresh.'
+      operationId: 58dc76d8b11cc12a893f63e174f2f6c0
+      parameters:
+        -
+          name: carGuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        -
+          name: imageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Image binary data.'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        404:
+          description: 'Image not found.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        502:
+          description: 'Unable to load remote image.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  /api/verdicts/search:
+    get:
+      tags:
+        - Verdicts
+      summary: 'Search verdicts for a specific make, model, and optional year.'
+      operationId: 8ecc4a5d3e64fb2f6166711d54bd35a6
+      parameters:
+        -
+          name: make
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: model
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Search results.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScottyVerdictSearchResponse'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  /api/verdicts/top-best:
+    get:
+      tags:
+        - Verdicts
+      summary: 'Return top positively mentioned vehicles.'
+      operationId: 6fbba5cb88837cde4b9726d13a263992
+      parameters:
+        -
+          name: vehicle_type_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        -
+          name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        -
+          name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 20
+      responses:
+        200:
+          description: 'Paginated verdicts.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScottyVerdictPaginatedResponse'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  /api/verdicts/top-worst:
+    get:
+      tags:
+        - Verdicts
+      summary: 'Return top negatively mentioned vehicles.'
+      operationId: 86347a71f7f70387ad679467cd88ff5c
+      parameters:
+        -
+          name: vehicle_type_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        -
+          name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        -
+          name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            maximum: 20
+      responses:
+        200:
+          description: 'Paginated verdicts.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScottyVerdictPaginatedResponse'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  /api/verdicts/video-mentions:
+    get:
+      tags:
+        - Verdicts
+      summary: 'Return video mentions for a make/model and optional year range.'
+      operationId: 58fa0759c8032b30899d4cc2a0626aa2
+      parameters:
+        -
+          name: make
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: model
+          in: query
+          required: true
+          schema:
+            type: string
+        -
+          name: start_year
+          in: query
+          required: false
+          schema:
+            type: integer
+        -
+          name: end_year
+          in: query
+          required: false
+          schema:
+            type: integer
+        -
+          name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+      responses:
+        200:
+          description: 'Video mentions response.'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validation error.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+  /api/listings/near-me:
+    get:
+      tags:
+        - Listings
+      summary: 'Find private party listings near a ZIP code or geo coordinates.'
+      operationId: e01007764bd2a42e602140075cd07503
+      parameters:
+        -
+          name: zip
+          in: query
+          required: false
+          schema:
+            type: string
+        -
+          name: latitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        -
+          name: longitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        -
+          name: radius
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 100
+        -
+          name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 50
+        -
+          name: make
+          in: query
+          required: false
+          schema:
+            type: string
+        -
+          name: model
+          in: query
+          required: false
+          schema:
+            type: string
+        -
+          name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: 'Nearby listings.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbyListingsResponse'
+        401:
+          description: Unauthenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        422:
+          description: 'Validation error.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        -
+          sanctumCookieAuth: []
+          xsrfHeader: []
+        -
+          bearerToken: []
+components:
+  schemas:
+    VideoItem:
+      properties:
+        video_id:
+          type: string
+        comment:
+          type: string
+          nullable: true
+        video_title:
+          type: string
+        timestamp:
+          type: string
+          nullable: true
+      type: object
+    ImageItem:
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+      type: object
+    PriceRange:
+      properties:
+        min:
+          type: integer
+          nullable: true
+        max:
+          type: integer
+          nullable: true
+        listing_count:
+          type: integer
+        currency:
+          type: string
+          example: USD
+      type: object
+    ScottyCarObject:
+      properties:
+        guid:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        vehicle_type_id:
+          type: integer
+          nullable: true
+        vehicle_type:
+          type: string
+          nullable: true
+        manufacturer_name:
+          type: string
+          nullable: true
+        trim:
+          type: string
+          nullable: true
+        body_class:
+          type: string
+          nullable: true
+        drive_type:
+          type: string
+          nullable: true
+        fuel_type_primary:
+          type: string
+          nullable: true
+        engine_cylinders:
+          type: string
+          nullable: true
+        transmission_style:
+          type: string
+          nullable: true
+        tobuy:
+          type: boolean
+        total_mentions:
+          type: integer
+        videos:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoItem'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageItem'
+        price_range:
+          $ref: '#/components/schemas/PriceRange'
+      type: object
+    PaginationMeta:
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+      type: object
+    ScottyVerdictSearchResponse:
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScottyCarObject'
+      type: object
+    ScottyVerdictPaginatedResponse:
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScottyCarObject'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+      type: object
+    ListingItem:
+      properties:
+        listing_id:
+          type: string
+        heading:
+          type: string
+          nullable: true
+        price:
+          type: integer
+          nullable: true
+        miles:
+          type: integer
+          nullable: true
+        distance_miles:
+          type: number
+          format: float
+          nullable: true
+        vdp_url:
+          type: string
+          format: uri
+          nullable: true
+        seller_type:
+          type: string
+          nullable: true
+        inventory_type:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        zip:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: float
+          nullable: true
+        longitude:
+          type: number
+          format: float
+          nullable: true
+        build:
+          properties:
+            year:
+              type: integer
+              nullable: true
+            make:
+              type: string
+              nullable: true
+            model:
+              type: string
+              nullable: true
+            trim:
+              type: string
+              nullable: true
+            car_guid:
+              type: string
+              nullable: true
+          type: object
+      type: object
+    NearbyListingsResponse:
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingItem'
+        meta:
+          properties:
+            count:
+              type: integer
+            radius_miles:
+              type: integer
+            source:
+              type: string
+          type: object
+      type: object
+    AuthResponse:
+      properties:
+        message:
+          type: string
+        user:
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            email:
+              type: string
+              format: email
+          type: object
+      type: object
+    ErrorResponse:
+      properties:
+        message:
+          type: string
+      type: object
+  securitySchemes:
+    sanctumCookieAuth:
+      type: apiKey
+      description: 'Laravel Sanctum session cookie. Obtain with GET /sanctum/csrf-cookie and POST /api/auth/login.'
+      name: laravel_session
+      in: cookie
+    xsrfHeader:
+      type: apiKey
+      description: 'CSRF token header required for stateful SPA requests.'
+      name: X-XSRF-TOKEN
+      in: header
+    bearerToken:
+      type: http
+      description: 'Sanctum Personal Access Token. Create a token via login, then use it in the Authorization header: Bearer {token}'
+      scheme: bearer
+tags:
+  -
+    name: Auth
+  -
+    name: Verdicts
+  -
+    name: Listings
+  -
+    name: Images
