@@ -59,13 +59,11 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           source: "release.zip"
-          target: "/tmp"
+          target: "/home2/jayteemi/public_html/scotty-api"
           use_insecure_cipher: true
 
       - name: Decompress and deploy on server
         uses: appleboy/ssh-action@v1.0.3
-        env:
-          API_DEPLOY_PATH: ${{ vars.API_DEPLOY_PATH }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
@@ -73,28 +71,16 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           use_insecure_cipher: true
-          envs: API_DEPLOY_PATH
           script: |
             set -euo pipefail
-            DEPLOY_PATH="${API_DEPLOY_PATH:-/scotty-api}"
-            ARCHIVE_PATH="/tmp/release.zip"
+            DEPLOY_DIR="/home2/jayteemi/public_html/scotty-api"
+            ARCHIVE="$DEPLOY_DIR/release.zip"
 
-            echo "Looking for archive at: $ARCHIVE_PATH"
-            ls -la /tmp/ | head -20
+            echo "Verifying archive at: $ARCHIVE"
+            ls -lh "$ARCHIVE"
 
-            if [ ! -f "$ARCHIVE_PATH" ]; then
-              echo "ERROR: Release archive not found at $ARCHIVE_PATH"
-              exit 1
-            fi
-
-            echo "Archive found. Checking for unzip..."
-            if ! command -v unzip >/dev/null 2>&1; then
-              echo "ERROR: unzip is not installed on the server"
-              exit 1
-            fi
-
-            echo "Deploying to: $DEPLOY_PATH"
-            mkdir -p "$DEPLOY_PATH"
-            unzip -oq "$ARCHIVE_PATH" -d "$DEPLOY_PATH"
-            rm -f "$ARCHIVE_PATH"
-            echo "Deployment complete"
+            echo "Extracting in place..."
+            unzip -oq "$ARCHIVE" -d "$DEPLOY_DIR"
+            rm -f "$ARCHIVE"
+            echo "Deployment complete. Contents:"
+            ls "$DEPLOY_DIR" | head -20
