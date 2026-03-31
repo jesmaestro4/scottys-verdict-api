@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\ImageProxyController;
 use App\Http\Controllers\Api\ScottyVerdictController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,10 @@ Route::prefix('auth')->group(function (): void {
         Route::post('logout', [AuthController::class, 'logout'])->name('api.auth.logout');
     });
 });
+
+Route::post('contact', [ContactController::class, 'submit'])
+    ->middleware('throttle:5,1')
+    ->name('api.contact.submit');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('verdicts/search', [ScottyVerdictController::class, 'search'])->name('api.verdicts.search');

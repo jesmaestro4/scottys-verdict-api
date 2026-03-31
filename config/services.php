@@ -54,4 +54,16 @@ return [
         'verify_ssl' => env('VPIC_VERIFY_SSL', true),
     ],
 
+    'contact' => [
+        'to_email' => env('CONTACT_TO_EMAIL', env('MAIL_FROM_ADDRESS', '')),
+        'to_name' => env('CONTACT_TO_NAME', env('APP_NAME', 'Scotty Says Autos')),
+    ],
+
+    'recaptcha' => [
+        'enabled' => env('RECAPTCHA_ENABLED', true),
+        'secret' => env('RECAPTCHA_SECRET'),
+        'expected_action' => env('RECAPTCHA_EXPECTED_ACTION', 'contact'),
+        'min_score' => (float) env('RECAPTCHA_MIN_SCORE', 0.5),
+    ],
+
 ];
