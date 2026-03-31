@@ -61,6 +61,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: ".deploy/release.zip"
           target: "/tmp"
+          use_insecure_cipher: true
 
       - name: Decompress and deploy on server
         uses: appleboy/ssh-action@v1.0.3
@@ -72,6 +73,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
+          use_insecure_cipher: true
           envs: API_DEPLOY_PATH
           script: |
             set -euo pipefail
