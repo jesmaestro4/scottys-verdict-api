@@ -80,20 +80,22 @@ jobs:
             DEPLOY_PATH="${API_DEPLOY_PATH:-/scotty-api}"
             ARCHIVE_PATH="/tmp/.deploy/release.zip"
 
-            if [ ! -f "$ARCHIVE_PATH" ] && [ -f "/tmp/release.zip" ]; then
-              ARCHIVE_PATH="/tmp/release.zip"
-            fi
+            echo "Looking for archive at: $ARCHIVE_PATH"
+            ls -la /tmp/ | head -20
 
             if [ ! -f "$ARCHIVE_PATH" ]; then
-              echo "Release archive not found on server"
+              echo "ERROR: Release archive not found at $ARCHIVE_PATH"
               exit 1
             fi
 
+            echo "Archive found. Checking for unzip..."
             if ! command -v unzip >/dev/null 2>&1; then
-              echo "unzip is not installed on the server"
+              echo "ERROR: unzip is not installed on the server"
               exit 1
             fi
 
+            echo "Deploying to: $DEPLOY_PATH"
             mkdir -p "$DEPLOY_PATH"
             unzip -oq "$ARCHIVE_PATH" -d "$DEPLOY_PATH"
             rm -f "$ARCHIVE_PATH"
+            echo "Deployment complete"
