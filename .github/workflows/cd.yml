@@ -37,8 +37,7 @@ jobs:
 
       - name: Create deployment archive
         run: |
-          mkdir -p .deploy
-          zip -r .deploy/release.zip . \
+          zip -r release.zip . \
             -x "**/.git*" \
                "**/.github/**" \
                "**/node_modules/**" \
@@ -59,7 +58,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
-          source: ".deploy/release.zip"
+          source: "release.zip"
           target: "/tmp"
           use_insecure_cipher: true
 
@@ -78,7 +77,7 @@ jobs:
           script: |
             set -euo pipefail
             DEPLOY_PATH="${API_DEPLOY_PATH:-/scotty-api}"
-            ARCHIVE_PATH="/tmp/.deploy/release.zip"
+            ARCHIVE_PATH="/tmp/release.zip"
 
             echo "Looking for archive at: $ARCHIVE_PATH"
             ls -la /tmp/ | head -20
