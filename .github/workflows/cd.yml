@@ -44,7 +44,7 @@ jobs:
           protocol: ftps
           port: 21
           local-dir: ./
-          server-dir: /scottyapi/
+          server-dir: /scotty-api/
           dangerous-clean-slate: false
           exclude: |
             **/.git*
