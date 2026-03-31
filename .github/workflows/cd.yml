@@ -35,26 +35,63 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Deploy to cPanel via FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: Create deployment archive
+        run: |
+          mkdir -p .deploy
+          zip -r .deploy/release.zip . \
+            -x "**/.git*" \
+               "**/.github/**" \
+               "**/node_modules/**" \
+               "**/tests/**" \
+               "**/phpunit.xml" \
+               "**/.env" \
+               "**/.env.example" \
+               "**/storage/logs/**" \
+               "**/storage/framework/cache/**" \
+               "**/storage/framework/sessions/**" \
+               "**/storage/framework/views/**"
+
+      - name: Upload release archive via SSH
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
-          local-dir: ./
-          server-dir: /scotty-api/
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/.github/**
-            **/node_modules/**
-            **/tests/**
-            **/phpunit.xml
-            **/.env
-            **/.env.example
-            **/storage/logs/**
-            **/storage/framework/cache/**
-            **/storage/framework/sessions/**
-            **/storage/framework/views/**
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: ".deploy/release.zip"
+          target: "/tmp"
+
+      - name: Decompress and deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          API_DEPLOY_PATH: ${{ vars.API_DEPLOY_PATH }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          envs: API_DEPLOY_PATH
+          script: |
+            set -euo pipefail
+            DEPLOY_PATH="${API_DEPLOY_PATH:-/scotty-api}"
+            ARCHIVE_PATH="/tmp/.deploy/release.zip"
+
+            if [ ! -f "$ARCHIVE_PATH" ] && [ -f "/tmp/release.zip" ]; then
+              ARCHIVE_PATH="/tmp/release.zip"
+            fi
+
+            if [ ! -f "$ARCHIVE_PATH" ]; then
+              echo "Release archive not found on server"
+              exit 1
+            fi
+
+            if ! command -v unzip >/dev/null 2>&1; then
+              echo "unzip is not installed on the server"
+              exit 1
+            fi
+
+            mkdir -p "$DEPLOY_PATH"
+            unzip -oq "$ARCHIVE_PATH" -d "$DEPLOY_PATH"
+            rm -f "$ARCHIVE_PATH"
