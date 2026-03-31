@@ -82,5 +82,38 @@ jobs:
             echo "Extracting in place..."
             unzip -oq "$ARCHIVE" -d "$DEPLOY_DIR"
             rm -f "$ARCHIVE"
+            cd "$DEPLOY_DIR"
+
+            echo "Preparing Laravel runtime directories and permissions..."
+            mkdir -p storage/logs
+            mkdir -p storage/framework/cache/data
+            mkdir -p storage/framework/sessions
+            mkdir -p storage/framework/views
+            mkdir -p bootstrap/cache
+            chmod -R ug+rwX storage bootstrap/cache || true
+
+            if [ -f artisan ]; then
+              echo "Clearing stale Laravel caches..."
+              php artisan optimize:clear || true
+
+              if [ -f .env ]; then
+                echo "Rebuilding Laravel caches..."
+                php artisan config:cache || true
+                php artisan route:cache || true
+                php artisan view:cache || true
+              else
+                echo "No .env found, skipping config/route/view cache rebuild."
+              fi
+            fi
+
+            echo "Running health checks..."
+            curl -fsS -o /dev/null -m 20 "http://api.scottysays.autos/api" || true
+            curl -fsS -o /dev/null -m 20 "http://api.scottysays.autos/swagger" || true
+
+            if [ -f storage/logs/laravel.log ]; then
+              echo "Recent Laravel log entries:"
+              tail -n 120 storage/logs/laravel.log || true
+            fi
+
             echo "Deployment complete. Contents:"
             ls "$DEPLOY_DIR" | head -20
