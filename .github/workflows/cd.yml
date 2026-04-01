@@ -96,39 +96,7 @@ jobs:
             unzip -oq "$ARCHIVE" -d "$DEPLOY_DIR"
             rm -f "$ARCHIVE"
 
-            if [ ! -f "$ENV_FILE" ]; then
-              cp "$DEPLOY_DIR/.env.example" "$ENV_FILE"
-            fi
-
-            if [ -f "$VARS_FILE" ]; then
-              awk -F= '
-                BEGIN {
-                  while ((getline line < envf) > 0) {
-                    if (line ~ /^[A-Za-z_][A-Za-z0-9_]*=/) {
-                      split(line, kv, "=")
-                      existing[kv[1]] = line
-                    }
-                  }
-                  close(envf)
-                }
-                {
-                  if ($0 ~ /^[A-Za-z_][A-Za-z0-9_]*=/) {
-                    key=$1
-                    if (key != "APP_KEY") {
-                      existing[key]=$0
-                    }
-                  }
-                }
-                END {
-                  for (k in existing) {
-                    print existing[k]
-                  }
-                }
-              ' envf="$ENV_FILE" "$VARS_FILE" > "$ENV_FILE.tmp"
-
-              mv "$ENV_FILE.tmp" "$ENV_FILE"
-              rm -f "$VARS_FILE"
-            fi
+            bash "$DEPLOY_DIR/scripts/merge-runtime-env.sh" "$ENV_FILE" "$VARS_FILE"
 
             cd "$DEPLOY_DIR"
             php artisan config:clear --no-interaction || true
