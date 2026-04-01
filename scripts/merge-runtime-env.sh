@@ -31,21 +31,9 @@ while IFS= read -r line || [ -n "$line" ]; do
     continue
   fi
 
-  if grep -Eq "^${key}=" "$ENV_FILE"; then
-    KEY="$key" VALUE="$value" perl -i -pe '
-      BEGIN {
-        $k = $ENV{KEY};
-        $v = $ENV{VALUE};
-        $done = 0;
-      }
-      if (!$done && /^\Q$k\E=/) {
-        $_ = "$k=$v\n";
-        $done = 1;
-      }
-    ' "$ENV_FILE"
-  else
-    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
-  fi
+  # Drop any existing definitions of this key, then append the GitHub value.
+  KEY="$key" perl -i -ne 'print unless /^\Q$ENV{KEY}\E=/' "$ENV_FILE"
+  printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
 done < "$VARS_FILE"
 
 rm -f "$VARS_FILE"
