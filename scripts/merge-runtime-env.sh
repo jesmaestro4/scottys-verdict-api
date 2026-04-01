@@ -12,36 +12,40 @@ if [ ! -f "$ENV_FILE" ]; then
   cp .env.example "$ENV_FILE"
 fi
 
-awk -F= -v envf="$ENV_FILE" '
-  function is_env_kv(line) {
-    return line ~ /^[A-Za-z_][A-Za-z0-9_]*=/
-  }
+while IFS= read -r line || [ -n "$line" ]; do
+  case "$line" in
+    ''|'#'*)
+      continue
+      ;;
+  esac
 
-  BEGIN {
-    while ((getline line < envf) > 0) {
-      if (is_env_kv(line)) {
-        split(line, kv, "=")
-        existing[kv[1]] = line
+  if ! printf '%s' "$line" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*='; then
+    continue
+  fi
+
+  key="${line%%=*}"
+  value="${line#*=}"
+
+  # Never overwrite the server-side application key.
+  if [ "$key" = "APP_KEY" ]; then
+    continue
+  fi
+
+  if grep -Eq "^${key}=" "$ENV_FILE"; then
+    KEY="$key" VALUE="$value" perl -i -pe '
+      BEGIN {
+        $k = $ENV{KEY};
+        $v = $ENV{VALUE};
+        $done = 0;
       }
-    }
-    close(envf)
-  }
-
-  {
-    if (is_env_kv($0)) {
-      key = $1
-      if (key != "APP_KEY") {
-        existing[key] = $0
+      if (!$done && /^\Q$k\E=/) {
+        $_ = "$k=$v\n";
+        $done = 1;
       }
-    }
-  }
+    ' "$ENV_FILE"
+  else
+    printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
+  fi
+done < "$VARS_FILE"
 
-  END {
-    for (k in existing) {
-      print existing[k]
-    }
-  }
-' "$VARS_FILE" > "$ENV_FILE.tmp"
-
-mv "$ENV_FILE.tmp" "$ENV_FILE"
 rm -f "$VARS_FILE"
