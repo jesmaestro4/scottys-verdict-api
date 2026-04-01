@@ -26,14 +26,10 @@ while IFS= read -r line || [ -n "$line" ]; do
   key="${line%%=*}"
   value="${line#*=}"
 
-  # Never overwrite the server-side application key.
-  if [ "$key" = "APP_KEY" ]; then
-    continue
+  # Replace only keys that already exist in the env file. Do not append new keys.
+  if grep -Eq "^${key}=" "$ENV_FILE"; then
+    KEY="$key" VALUE="$value" perl -i -pe 's/^\Q$ENV{KEY}\E=.*/$ENV{KEY}=$ENV{VALUE}/' "$ENV_FILE"
   fi
-
-  # Drop any existing definitions of this key, then append the GitHub value.
-  KEY="$key" perl -i -ne 'print unless /^\Q$ENV{KEY}\E=/' "$ENV_FILE"
-  printf '%s=%s\n' "$key" "$value" >> "$ENV_FILE"
 done < "$VARS_FILE"
 
 rm -f "$VARS_FILE"
