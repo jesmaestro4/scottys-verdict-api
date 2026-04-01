@@ -82,5 +82,18 @@ jobs:
             echo "Extracting in place..."
             unzip -oq "$ARCHIVE" -d "$DEPLOY_DIR"
             rm -f "$ARCHIVE"
+
+            cd "$DEPLOY_DIR"
+
+            # Bootstrap runtime env only when first deploy (or key is missing).
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+
+            if ! grep -q '^APP_KEY=base64:' .env; then
+              php artisan key:generate --force --no-interaction
+            fi
+
+            php artisan config:clear --no-interaction
             echo "Deployment complete. Contents:"
             ls "$DEPLOY_DIR" | head -20
