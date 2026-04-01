@@ -9,6 +9,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout
@@ -50,6 +51,16 @@ jobs:
                "**/storage/framework/sessions/**" \
                "**/storage/framework/views/**"
 
+      - name: Export GitHub Environment variables
+        env:
+          VARS_JSON: ${{ toJson(vars) }}
+        run: |
+          printf '%s' "$VARS_JSON" \
+            | jq -r 'to_entries[] | "\(.key)=\(.value|tostring|gsub("\n";"\\n"))"' \
+            > runtime.vars.env
+
+          echo "Exported $(wc -l < runtime.vars.env) non-secret environment vars"
+
       - name: Upload release archive via SSH
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -58,7 +69,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
-          source: "release.zip"
+          source: "release.zip,runtime.vars.env"
           target: "/home2/jayteemi/public_html/scotty-api"
           use_insecure_cipher: true
 
@@ -75,6 +86,8 @@ jobs:
             set -euo pipefail
             DEPLOY_DIR="/home2/jayteemi/public_html/scotty-api"
             ARCHIVE="$DEPLOY_DIR/release.zip"
+            VARS_FILE="$DEPLOY_DIR/runtime.vars.env"
+            ENV_FILE="$DEPLOY_DIR/.env"
 
             echo "Verifying archive at: $ARCHIVE"
             ls -lh "$ARCHIVE"
@@ -83,17 +96,41 @@ jobs:
             unzip -oq "$ARCHIVE" -d "$DEPLOY_DIR"
             rm -f "$ARCHIVE"
 
+            if [ ! -f "$ENV_FILE" ]; then
+              cp "$DEPLOY_DIR/.env.example" "$ENV_FILE"
+            fi
+
+            if [ -f "$VARS_FILE" ]; then
+              awk -F= '
+                BEGIN {
+                  while ((getline line < envf) > 0) {
+                    if (line ~ /^[A-Za-z_][A-Za-z0-9_]*=/) {
+                      split(line, kv, "=")
+                      existing[kv[1]] = line
+                    }
+                  }
+                  close(envf)
+                }
+                {
+                  if ($0 ~ /^[A-Za-z_][A-Za-z0-9_]*=/) {
+                    key=$1
+                    if (key != "APP_KEY") {
+                      existing[key]=$0
+                    }
+                  }
+                }
+                END {
+                  for (k in existing) {
+                    print existing[k]
+                  }
+                }
+              ' envf="$ENV_FILE" "$VARS_FILE" > "$ENV_FILE.tmp"
+
+              mv "$ENV_FILE.tmp" "$ENV_FILE"
+              rm -f "$VARS_FILE"
+            fi
+
             cd "$DEPLOY_DIR"
-
-            # Bootstrap runtime env only when first deploy (or key is missing).
-            if [ ! -f .env ]; then
-              cp .env.example .env
-            fi
-
-            if ! grep -q '^APP_KEY=base64:' .env; then
-              php artisan key:generate --force --no-interaction
-            fi
-
-            php artisan config:clear --no-interaction
+            php artisan config:clear --no-interaction || true
             echo "Deployment complete. Contents:"
             ls "$DEPLOY_DIR" | head -20
