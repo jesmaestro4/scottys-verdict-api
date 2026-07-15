@@ -37,6 +37,7 @@ class VerdictRepository
                 'comment' => $row->Comment,
                 'video_title' => $row->VideoTitle,
                 'timestamp' => $row->Timestamp,
+                'isGoodverdict' => $source === 'good',
             ])
             ->all();
 
@@ -98,7 +99,7 @@ class VerdictRepository
             ]);
 
         $carGuids = $groups->pluck('guid')->filter()->values()->all();
-        $videosByGuid = $this->topVideosForCarGuids($table, $carGuids, 10);
+        $videosByGuid = $this->topVideosForCarGuids($table, $carGuids, 10, $source === 'good');
         $imagesByGuid = $this->imagesForCarGuids($carGuids);
 
         return $groups->map(function (object $row) use ($videosByGuid, $imagesByGuid): array {
@@ -211,6 +212,7 @@ class VerdictRepository
                 'timestamp' => $row->Timestamp,
                 'start_year' => $row->StartYear !== null ? (int) $row->StartYear : null,
                 'end_year' => $row->EndYear !== null ? (int) $row->EndYear : null,
+                'isGoodverdict' => $source === 'good',
             ])
             ->all();
     }
@@ -240,7 +242,7 @@ class VerdictRepository
         return $query;
     }
 
-    private function topVideosForCarGuids(string $table, array $carGuids, int $perCarLimit): array
+    private function topVideosForCarGuids(string $table, array $carGuids, int $perCarLimit, bool $isGoodVerdict): array
     {
         if ($carGuids === []) {
             return [];
@@ -269,6 +271,7 @@ class VerdictRepository
                 'comment' => $row->Comment,
                 'video_title' => $row->VideoTitle,
                 'timestamp' => $row->Timestamp,
+                'isGoodverdict' => $isGoodVerdict,
             ];
         }
 

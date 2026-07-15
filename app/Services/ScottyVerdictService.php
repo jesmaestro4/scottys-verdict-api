@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\VerdictRepository;
+use Illuminate\Support\Collection;
 
 class ScottyVerdictService
 {
@@ -83,7 +84,7 @@ class ScottyVerdictService
     public function videoMentions(string $make, string $model, ?int $startYear, ?int $endYear, int $limit = 50): array
     {
         return [
-            'data' => $this->verdicts->videoMentionsByRange('good', $make, $model, $startYear, $endYear, $limit),
+            'data' => $this->mergedVideoMentions($make, $model, $startYear, $endYear, $limit),
             'meta' => [
                 'make' => $make,
                 'model' => $model,
@@ -113,5 +114,19 @@ class ScottyVerdictService
         }
 
         return $payload;
+    }
+
+    private function mergedVideoMentions(string $make, string $model, ?int $startYear, ?int $endYear, int $limit): array
+    {
+        return collect(['good', 'bad'])
+            ->flatMap(fn (string $source): array => $this->verdicts->videoMentionsByRange($source, $make, $model, $startYear, $endYear, $limit))
+            ->unique(fn (array $video): string => implode('|', [
+                (string) ($video['video_id'] ?? ''),
+                (string) ($video['timestamp'] ?? ''),
+                (string) ($video['video_title'] ?? ''),
+            ]))
+            ->values()
+            ->take($limit)
+            ->all();
     }
 }

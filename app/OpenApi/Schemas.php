@@ -11,6 +11,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'comment', type: 'string', nullable: true),
         new OA\Property(property: 'video_title', type: 'string'),
         new OA\Property(property: 'timestamp', type: 'string', nullable: true),
+        new OA\Property(property: 'isGoodverdict', type: 'boolean'),
     ],
     type: 'object'
 )]
