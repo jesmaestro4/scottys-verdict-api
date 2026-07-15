@@ -420,6 +420,39 @@
                 ]
             }
         },
+        "/api/verdicts/vehicle-types": {
+            "get": {
+                "tags": [
+                    "Verdicts"
+                ],
+                "summary": "Return all vehicle types used for verdict filtering tabs.",
+                "operationId": "1c21e209422b68f90f0f8e41755c4b9a",
+                "responses": {
+                    "200": {
+                        "description": "Vehicle types response."
+                    },
+                    "401": {
+                        "description": "Unauthenticated.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctumCookieAuth": [],
+                        "xsrfHeader": []
+                    },
+                    {
+                        "bearerToken": []
+                    }
+                ]
+            }
+        },
         "/api/verdicts/video-mentions": {
             "get": {
                 "tags": [
@@ -647,6 +680,9 @@
                     "timestamp": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "isGoodverdict": {
+                        "type": "boolean"
                     }
                 },
                 "type": "object"

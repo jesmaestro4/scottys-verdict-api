@@ -20,11 +20,12 @@ Route::post('contact', [ContactController::class, 'submit'])
     ->name('api.contact.submit');
 
 Route::get('images/{carGuid}/{imageId}', [ImageProxyController::class, 'show'])->name('api.images.show');
+Route::get('verdicts/vehicle-types', [ScottyVerdictController::class, 'vehicleTypes'])->name('api.verdicts.vehicle-types');
+Route::get('verdicts/top-best', [ScottyVerdictController::class, 'topBest'])->name('api.verdicts.top-best');
+Route::get('verdicts/top-worst', [ScottyVerdictController::class, 'topWorst'])->name('api.verdicts.top-worst');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('verdicts/search', [ScottyVerdictController::class, 'search'])->name('api.verdicts.search');
-    Route::get('verdicts/top-best', [ScottyVerdictController::class, 'topBest'])->name('api.verdicts.top-best');
-    Route::get('verdicts/top-worst', [ScottyVerdictController::class, 'topWorst'])->name('api.verdicts.top-worst');
     Route::get('verdicts/video-mentions', [ScottyVerdictController::class, 'videoMentions'])->name('api.verdicts.video-mentions');
     Route::get('listings/near-me', [ScottyVerdictController::class, 'nearbyListings'])->name('api.listings.near-me');
 });

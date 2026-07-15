@@ -103,6 +103,21 @@ class ScottyVerdictController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/verdicts/vehicle-types',
+        summary: 'Return all vehicle types used for verdict filtering tabs.',
+        security: [['sanctumCookieAuth' => [], 'xsrfHeader' => []], ['bearerToken' => []]],
+        tags: ['Verdicts'],
+        responses: [
+            new OA\Response(response: 200, description: 'Vehicle types response.'),
+            new OA\Response(response: 401, description: 'Unauthenticated.', content: new OA\JsonContent(ref: self::ERROR_SCHEMA)),
+        ]
+    )]
+    public function vehicleTypes(): JsonResponse
+    {
+        return response()->json($this->verdicts->vehicleTypes());
+    }
+
+    #[OA\Get(
         path: '/api/verdicts/video-mentions',
         summary: 'Return video mentions for a make/model and optional year range.',
         security: [['sanctumCookieAuth' => [], 'xsrfHeader' => []], ['bearerToken' => []]],

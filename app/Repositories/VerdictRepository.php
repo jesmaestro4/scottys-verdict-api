@@ -16,6 +16,24 @@ class VerdictRepository
         'bad' => 'verdict_badcars',
     ];
 
+    public function vehicleTypes(): Collection
+    {
+        return DB::table('car_vehicletype')
+            ->select([
+                'VehicleTypeId as vehicle_type_id',
+                'VehicleTypeName as vehicle_type_name',
+                'CustomVehicleTypeName as custom_vehicle_type_name',
+            ])
+            ->whereNotNull('VehicleTypeId')
+            ->orderBy('VehicleTypeId')
+            ->get()
+            ->map(fn (object $row): array => [
+                'vehicle_type_id' => (int) $row->vehicle_type_id,
+                'vehicle_type_name' => $row->vehicle_type_name !== null ? (string) $row->vehicle_type_name : null,
+                'custom_vehicle_type_name' => $row->custom_vehicle_type_name !== null ? (string) $row->custom_vehicle_type_name : null,
+            ]);
+    }
+
     public function findGroupedVerdict(string $source, string $make, string $model, ?int $year): ?array
     {
         $query = $this->baseQuery($source, $make, $model, $year);

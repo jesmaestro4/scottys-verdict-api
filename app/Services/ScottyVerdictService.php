@@ -81,6 +81,13 @@ class ScottyVerdictService
         ];
     }
 
+    public function vehicleTypes(): array
+    {
+        return [
+            'data' => $this->verdicts->vehicleTypes()->all(),
+        ];
+    }
+
     public function videoMentions(string $make, string $model, ?int $startYear, ?int $endYear, int $limit = 50): array
     {
         return [
