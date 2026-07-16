@@ -36,36 +36,53 @@ class VerdictRepository
 
     public function findGroupedVerdict(string $source, string $make, string $model, ?int $year): ?array
     {
-        $query = $this->baseQuery($source, $make, $model, $year);
+        $groups = $this->findGroupedVerdicts($source, $make, $model, $year);
 
-        $aggregate = (clone $query)
-            ->selectRaw('Make, Model, COUNT(*) as total_mentions, MIN(StartYear) as start_year, MAX(COALESCE(EndYear, StartYear)) as end_year')
-            ->groupBy('Make', 'Model')
-            ->first();
+        return $groups->first();
+    }
 
-        if ($aggregate === null) {
-            return null;
+    public function findGroupedVerdicts(string $source, string $make, string $model, ?int $year): Collection
+    {
+        $rows = $this->baseQuery($source, $make, $model, $year)
+            ->orderBy('Id')
+            ->get(['Make', 'Model', 'StartYear', 'EndYear', 'YoutubeVideoId', 'Comment', 'VideoTitle', 'Timestamp']);
+
+        if ($rows->isEmpty()) {
+            return collect();
         }
 
-        $videos = (clone $query)
-            ->orderBy('Id')
-            ->get(['YoutubeVideoId', 'Comment', 'VideoTitle', 'Timestamp'])
-            ->map(fn (object $row): array => [
+        $groups = [];
+
+        foreach ($rows as $row) {
+            $startYear = $row->StartYear !== null ? (int) $row->StartYear : null;
+            $endYear = $row->EndYear !== null ? (int) $row->EndYear : $startYear;
+            $bucketKey = ($startYear ?? 0).'|'.($endYear ?? 0);
+
+            if (!isset($groups[$bucketKey])) {
+                $groups[$bucketKey] = [
+                    'make' => (string) $row->Make,
+                    'model' => (string) $row->Model,
+                    'year' => $startYear ?? $endYear,
+                    'start_year' => $startYear,
+                    'end_year' => $endYear,
+                    'total_mentions' => 0,
+                    'videos' => [],
+                ];
+            }
+
+            $groups[$bucketKey]['total_mentions']++;
+            $groups[$bucketKey]['videos'][] = [
                 'video_id' => $row->YoutubeVideoId,
                 'comment' => $row->Comment,
                 'video_title' => $row->VideoTitle,
                 'timestamp' => $row->Timestamp,
                 'isGoodverdict' => $source === 'good',
-            ])
-            ->all();
+            ];
+        }
 
-        return [
-            'make' => $aggregate->Make,
-            'model' => $aggregate->Model,
-            'year' => $year ?? $aggregate->start_year ?? $aggregate->end_year,
-            'total_mentions' => (int) $aggregate->total_mentions,
-            'videos' => $videos,
-        ];
+        return collect(array_values($groups))
+            ->sortByDesc('total_mentions')
+            ->values();
     }
 
     public function topGroupedVerdicts(string $source, int $limit = 200): Collection

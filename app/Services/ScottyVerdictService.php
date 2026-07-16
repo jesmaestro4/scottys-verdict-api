@@ -18,14 +18,14 @@ class ScottyVerdictService
         $results = [];
 
         foreach (['good' => true, 'bad' => false] as $source => $toBuy) {
-            $group = $this->verdicts->findGroupedVerdict($source, $make, $model, $year);
+            $groups = $this->verdicts->findGroupedVerdicts($source, $make, $model, $year);
 
-            if ($group === null) {
-                continue;
+            foreach ($groups as $group) {
+                $results[] = $this->buildPayload($group, $toBuy);
             }
-
-            $results[] = $this->buildPayload($group, $toBuy);
         }
+
+        usort($results, static fn (array $a, array $b): int => ($b['total_mentions'] ?? 0) <=> ($a['total_mentions'] ?? 0));
 
         return $results;
     }
