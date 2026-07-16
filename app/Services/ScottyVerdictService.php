@@ -35,11 +35,20 @@ class ScottyVerdictService
         $items = [];
 
         foreach ($this->verdicts->topGroupedVerdicts($source) as $group) {
+            $guid = isset($group['guid']) ? (string) $group['guid'] : null;
+            $year = isset($group['year']) ? (int) $group['year'] : null;
+            $make = (string) ($group['make'] ?? '');
+            $model = (string) ($group['model'] ?? '');
+
+            $images = $guid !== null
+                ? [['id' => $guid, 'url' => route('api.images.car', ['carGuid' => $guid])]]
+                : [];
+
             $payload = [
-                'guid' => $group['guid'] ?? null,
-                'make' => strtoupper((string) ($group['make'] ?? '')),
-                'model' => (string) ($group['model'] ?? ''),
-                'year' => isset($group['year']) ? (int) $group['year'] : null,
+                'guid' => $guid,
+                'make' => strtoupper($make),
+                'model' => $model,
+                'year' => $year,
                 'start_year' => $group['start_year'] ?? null,
                 'end_year' => $group['end_year'] ?? null,
                 'vehicle_type_id' => $group['vehicle_type_id'] ?? null,
@@ -51,10 +60,7 @@ class ScottyVerdictService
                 'fuel_type_primary' => $group['fuel_type_primary'] ?? null,
                 'engine_cylinders' => $group['engine_cylinders'] ?? null,
                 'transmission_style' => $group['transmission_style'] ?? null,
-                'images' => array_map(fn (array $image): array => [
-                    'id' => $image['id'],
-                    'url' => route('api.images.show', ['carGuid' => $group['guid'], 'imageId' => $image['id']]),
-                ], $group['images'] ?? []),
+                'images' => $images,
                 'price_range' => ['min' => null, 'max' => null, 'listing_count' => 0, 'currency' => 'USD'],
                 'tobuy' => $source === 'good',
                 'total_mentions' => $group['total_mentions'],

@@ -71,17 +71,7 @@ class CarProfileService
     public function resolveCarObject(string $make, string $model, ?int $year): array
     {
         $car = $this->ensureCachedCar($make, $model, $year);
-
-        $images = $this->cars->imagesForCar($car['Guid']);
-
-        if ($images === []) {
-            try {
-                $this->cars->syncImages($car['Guid'], $this->carImages->fetchSignedImageUrls($make, $model, $year));
-            } catch (Throwable) {
-                // Degrade gracefully when image provider is unavailable.
-            }
-            $images = $this->cars->imagesForCar($car['Guid']);
-        }
+        $images = $this->resolveImagePayloadForCar($car['Guid'], $make, $model, $year);
 
         $priceRange = $this->listings->priceRangeForCar($car['Guid']);
 
@@ -121,12 +111,36 @@ class CarProfileService
             'fuel_type_primary' => $car['FuelTypePrimary'] ?? null,
             'engine_cylinders' => $car['EngineNumberOfCylinders'] ?? null,
             'transmission_style' => $car['TransmissionStyle'] ?? null,
-            'images' => array_map(fn (array $image): array => [
-                'id' => $image['ImageId'],
-                'url' => route('api.images.show', ['carGuid' => $car['Guid'], 'imageId' => $image['ImageId']]),
-            ], $images),
+            'images' => $images,
             'price_range' => $priceRange,
         ];
+    }
+
+    public function resolveImagePayloadForCar(string $carGuid, string $make, string $model, ?int $year): array
+    {
+        $images = $this->resolveOrBackfillImages($carGuid, $make, $model, $year);
+
+        return array_map(fn (array $image): array => [
+            'id' => $image['ImageId'],
+            'url' => route('api.images.show', ['carGuid' => $carGuid, 'imageId' => $image['ImageId']]),
+        ], $images);
+    }
+
+    private function resolveOrBackfillImages(string $carGuid, string $make, string $model, ?int $year): array
+    {
+        $images = $this->cars->imagesForCar($carGuid);
+
+        if ($images !== []) {
+            return $images;
+        }
+
+        try {
+            $this->cars->syncImages($carGuid, $this->carImages->fetchSignedImageUrls($make, $model, $year));
+        } catch (Throwable) {
+            // Degrade gracefully when image provider is unavailable.
+        }
+
+        return $this->cars->imagesForCar($carGuid);
     }
 
     public function resolveCachedCarObject(string $make, string $model, ?int $year): array

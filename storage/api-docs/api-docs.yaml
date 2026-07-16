@@ -139,6 +139,35 @@ paths:
           xsrfHeader: []
         -
           bearerToken: []
+  '/api/images/{carGuid}':
+    get:
+      tags:
+        - Images
+      summary: 'Lazy-load, cache and return the first available image for a car by GUID.'
+      operationId: 98af2086331f0fdd9b1c5c3b96e7a8d1
+      parameters:
+        -
+          name: carGuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: 'Image binary data.'
+        404:
+          description: 'Car or image not found.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        502:
+          description: 'Unable to load remote image.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/verdicts/search:
     get:
       tags:

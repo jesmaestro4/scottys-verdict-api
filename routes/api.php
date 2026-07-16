@@ -19,6 +19,7 @@ Route::post('contact', [ContactController::class, 'submit'])
     ->middleware('throttle:5,1')
     ->name('api.contact.submit');
 
+Route::get('images/{carGuid}', [ImageProxyController::class, 'showByCar'])->name('api.images.car');
 Route::get('images/{carGuid}/{imageId}', [ImageProxyController::class, 'show'])->name('api.images.show');
 Route::get('verdicts/vehicle-types', [ScottyVerdictController::class, 'vehicleTypes'])->name('api.verdicts.vehicle-types');
 Route::get('verdicts/top-best', [ScottyVerdictController::class, 'topBest'])->name('api.verdicts.top-best');
