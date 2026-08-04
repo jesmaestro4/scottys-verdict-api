@@ -183,6 +183,32 @@ paths:
           xsrfHeader: []
         -
           bearerToken: []
+  /api/verdicts/car/{guid}:
+    get:
+      tags:
+        - Verdicts
+      summary: 'Return verdict data for a specific car GUID.'
+      operationId: 6beaf6d8b6f04fd6ae8f77e2462ef91d
+      parameters:
+        -
+          name: guid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'Car verdict object.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScottyVerdictObjectResponse'
+        404:
+          description: 'Car not found.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/verdicts/top-best:
     get:
       tags:
@@ -528,6 +554,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ScottyCarObject'
+      type: object
+    ScottyVerdictObjectResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ScottyCarObject'
       type: object
     ScottyVerdictPaginatedResponse:
       properties:

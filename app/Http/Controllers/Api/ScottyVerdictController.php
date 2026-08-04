@@ -49,6 +49,33 @@ class ScottyVerdictController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/verdicts/car/{guid}',
+        summary: 'Return verdict data for a specific car GUID.',
+        tags: ['Verdicts'],
+        parameters: [
+            new OA\Parameter(name: 'guid', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Car verdict object.', content: new OA\JsonContent(ref: '#/components/schemas/ScottyVerdictObjectResponse')),
+            new OA\Response(response: 404, description: 'Car not found.', content: new OA\JsonContent(ref: self::ERROR_SCHEMA)),
+        ]
+    )]
+    public function carByGuid(string $guid): JsonResponse
+    {
+        $car = $this->verdicts->verdictByGuid($guid);
+
+        if ($car === null) {
+            return response()->json([
+                'message' => 'Car not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => $car,
+        ]);
+    }
+
+    #[OA\Get(
         path: '/api/verdicts/top-best',
         summary: 'Return top positively mentioned vehicles.',
         security: [['sanctumCookieAuth' => [], 'xsrfHeader' => []], ['bearerToken' => []]],

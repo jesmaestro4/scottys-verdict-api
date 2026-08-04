@@ -85,6 +85,43 @@ class VerdictRepository
             ->values();
     }
 
+    public function groupedVerdictByGuid(string $source, string $guid): ?array
+    {
+        $table = $this->tableFor($source);
+
+        $row = DB::table($table.' as v')
+            ->join('car_car as c', 'c.Guid', '=', 'v.car_GUID')
+            ->join('car_make as m', 'm.MakeId', '=', 'c.MakeId')
+            ->where('v.car_GUID', $guid)
+            ->groupBy('v.car_GUID', 'm.MakeName', 'c.Model', 'c.ModelYear')
+            ->first([
+                'v.car_GUID as guid',
+                'm.MakeName as make',
+                'c.Model as model',
+                'c.ModelYear as model_year',
+                DB::raw('COUNT(*) as total_mentions'),
+                DB::raw('MIN(v.StartYear) as start_year'),
+                DB::raw('MAX(COALESCE(v.EndYear, v.StartYear)) as end_year'),
+            ]);
+
+        if ($row === null) {
+            return null;
+        }
+
+        $videosByGuid = $this->topVideosForCarGuids($table, [$guid], 25, $source === 'good');
+
+        return [
+            'guid' => (string) $row->guid,
+            'make' => (string) $row->make,
+            'model' => (string) $row->model,
+            'year' => $row->model_year !== null ? (int) $row->model_year : null,
+            'start_year' => $row->start_year !== null ? (int) $row->start_year : null,
+            'end_year' => $row->end_year !== null ? (int) $row->end_year : null,
+            'total_mentions' => (int) $row->total_mentions,
+            'videos' => $videosByGuid[$guid] ?? [],
+        ];
+    }
+
     public function topGroupedVerdicts(string $source, int $limit = 200): Collection
     {
         $table = $this->tableFor($source);

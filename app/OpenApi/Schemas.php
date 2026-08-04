@@ -74,6 +74,13 @@ use OpenApi\Attributes as OA;
     type: 'object'
 )]
 #[OA\Schema(
+    schema: 'ScottyVerdictObjectResponse',
+    properties: [
+        new OA\Property(property: 'data', ref: '#/components/schemas/ScottyCarObject'),
+    ],
+    type: 'object'
+)]
+#[OA\Schema(
     schema: 'ScottyVerdictPaginatedResponse',
     properties: [
         new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/ScottyCarObject')),

@@ -116,6 +116,62 @@ class CarProfileService
         ];
     }
 
+    public function resolveCarObjectByGuid(string $guid): ?array
+    {
+        $car = $this->cars->findByGuid($guid);
+
+        if ($car === null) {
+            return null;
+        }
+
+        $make = (string) ($car['MakeName'] ?? $car['ManufacturerName'] ?? '');
+        $model = (string) ($car['Model'] ?? '');
+        $year = $car['ModelYear'] !== null ? (int) $car['ModelYear'] : null;
+
+        $images = $this->resolveImagePayloadForCar($guid, $make, $model, $year);
+        $priceRange = $this->listings->priceRangeForCar($guid);
+
+        if ($priceRange['min'] === null && $priceRange['max'] === null) {
+            try {
+                $payload = $this->marketCheck->searchPrivatePartyListings([
+                    'make' => $make,
+                    'model' => $model,
+                    'year' => $year,
+                    'rows' => 20,
+                    'stats' => 'price',
+                ]);
+
+                $cachedListings = $this->mapRemoteListingsToRows($guid, $payload);
+
+                if ($cachedListings !== []) {
+                    $this->listings->cacheListings($cachedListings);
+                }
+
+                $priceRange = $this->marketCheck->extractPriceRange($payload);
+            } catch (Throwable) {
+                // Keep null price range if pricing provider is unavailable.
+            }
+        }
+
+        return [
+            'guid' => $guid,
+            'make' => $make,
+            'model' => $model,
+            'year' => $year,
+            'vehicle_type_id' => $car['VehicleTypeId'] !== null ? (int) $car['VehicleTypeId'] : null,
+            'vehicle_type' => $car['CustomVehicleTypeName'] ?? $car['VehicleTypeName'] ?? null,
+            'manufacturer_name' => $car['ManufacturerName'] ?? null,
+            'trim' => $car['Trim'] ?? null,
+            'body_class' => $car['BodyClass'] ?? null,
+            'drive_type' => $car['DriveType'] ?? null,
+            'fuel_type_primary' => $car['FuelTypePrimary'] ?? null,
+            'engine_cylinders' => $car['EngineNumberOfCylinders'] ?? null,
+            'transmission_style' => $car['TransmissionStyle'] ?? null,
+            'images' => $images,
+            'price_range' => $priceRange,
+        ];
+    }
+
     public function resolveImagePayloadForCar(string $carGuid, string $make, string $model, ?int $year): array
     {
         $images = $this->resolveOrBackfillImages($carGuid, $make, $model, $year);

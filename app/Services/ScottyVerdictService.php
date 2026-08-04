@@ -30,6 +30,62 @@ class ScottyVerdictService
         return $results;
     }
 
+    public function verdictByGuid(string $guid): ?array
+    {
+        $good = $this->verdicts->groupedVerdictByGuid('good', $guid);
+        $bad = $this->verdicts->groupedVerdictByGuid('bad', $guid);
+
+        if ($good === null && $bad === null) {
+            return null;
+        }
+
+        $goodMentions = (int) ($good['total_mentions'] ?? 0);
+        $badMentions = (int) ($bad['total_mentions'] ?? 0);
+        $toBuy = $goodMentions >= $badMentions;
+        $primary = $toBuy ? ($good ?? $bad) : ($bad ?? $good);
+
+        if ($primary === null) {
+            return null;
+        }
+
+        $carPayload = $this->cars->resolveCarObjectByGuid($guid);
+
+        if ($carPayload === null) {
+            return null;
+        }
+
+        $startCandidates = array_values(array_filter([
+            $good['start_year'] ?? null,
+            $bad['start_year'] ?? null,
+        ], static fn ($year): bool => is_int($year)));
+
+        $endCandidates = array_values(array_filter([
+            $good['end_year'] ?? null,
+            $bad['end_year'] ?? null,
+        ], static fn ($year): bool => is_int($year)));
+
+        $videos = collect(array_merge($good['videos'] ?? [], $bad['videos'] ?? []))
+            ->unique(fn (array $video): string => implode('|', [
+                (string) ($video['video_id'] ?? ''),
+                (string) ($video['timestamp'] ?? ''),
+                (string) ($video['video_title'] ?? ''),
+            ]))
+            ->values()
+            ->all();
+
+        return array_merge(
+            $carPayload,
+            [
+                'year' => $primary['year'] ?? ($carPayload['year'] ?? null),
+                'start_year' => $startCandidates !== [] ? min($startCandidates) : null,
+                'end_year' => $endCandidates !== [] ? max($endCandidates) : null,
+                'tobuy' => $toBuy,
+                'total_mentions' => $goodMentions + $badMentions,
+                'videos' => $videos,
+            ],
+        );
+    }
+
     public function topVerdicts(string $source, int $page, int $pageSize, ?int $vehicleTypeId): array
     {
         $items = [];
