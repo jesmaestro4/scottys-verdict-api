@@ -213,8 +213,8 @@ class VerdictRepository
             ->whereRaw(self::WHERE_MODEL_LOWER, [strtolower($model)]);
 
         if ($startYear !== null || $endYear !== null) {
-            $from = $startYear ?? $endYear;
-            $to = $endYear ?? $startYear;
+            $from = $startYear ?? 0;
+            $to = $endYear ?? 3000;
 
             $query->where(function (Builder $builder) use ($from, $to): void {
                 $builder
@@ -252,12 +252,12 @@ class VerdictRepository
             ->all();
     }
 
-    private function baseQuery(string $source, string $make, string $model, ?int $year): Builder
-    {
-        $query = DB::table($this->tableFor($source))
-            ->whereRaw(self::WHERE_MAKE_LOWER, [strtolower($make)])
-            ->whereRaw(self::WHERE_MODEL_LOWER, [strtolower($model)]);
-
+        $verdictTable = $this->tableFor($source);
+        $query = DB::table($verdictTable . ' as v')
+            ->join('car_car as c', 'c.Guid', '=', 'v.car_GUID')
+            ->join('car_make as m', 'm.MakeId', '=', 'c.MakeId')
+            ->whereRaw('LOWER(m.MakeName) = ?', [strtolower($make)])
+            ->whereRaw('LOWER(c.Model) = ?', [strtolower($model)]);
         if ($year !== null) {
             $query->where(function (Builder $builder) use ($year): void {
                 $builder
@@ -265,10 +265,10 @@ class VerdictRepository
                     ->orWhere('EndYear', $year)
                     ->orWhere(function (Builder $range) use ($year): void {
                         $range->whereNotNull('StartYear')
-                            ->where('StartYear', '<=', $year)
+                            ->where('StartYear', '>=', $year)
                             ->where(function (Builder $end) use ($year): void {
                                 $end->whereNull('EndYear')
-                                    ->orWhere('EndYear', '>=', $year);
+                                    ->orWhere('EndYear', '<=', $year);
                             });
                     });
             });
