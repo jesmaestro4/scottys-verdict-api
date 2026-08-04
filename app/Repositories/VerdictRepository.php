@@ -44,8 +44,8 @@ class VerdictRepository
     public function findGroupedVerdicts(string $source, string $make, string $model, ?int $year): Collection
     {
         $rows = $this->baseQuery($source, $make, $model, $year)
-            ->orderBy('Id')
-            ->get(['Make', 'Model', 'StartYear', 'EndYear', 'YoutubeVideoId', 'Comment', 'VideoTitle', 'Timestamp']);
+            ->orderBy('v.Id')
+            ->get(['v.Make', 'v.Model', 'v.StartYear', 'v.EndYear', 'v.YoutubeVideoId', 'v.Comment', 'v.VideoTitle', 'v.Timestamp']);
 
         if ($rows->isEmpty()) {
             return collect();
@@ -252,6 +252,8 @@ class VerdictRepository
             ->all();
     }
 
+    private function baseQuery(string $source, string $make, string $model, ?int $year): Builder
+    {
         $verdictTable = $this->tableFor($source);
         $query = DB::table($verdictTable . ' as v')
             ->join('car_car as c', 'c.Guid', '=', 'v.car_GUID')
@@ -261,14 +263,15 @@ class VerdictRepository
         if ($year !== null) {
             $query->where(function (Builder $builder) use ($year): void {
                 $builder
-                    ->where('StartYear', $year)
-                    ->orWhere('EndYear', $year)
+                    ->Where('c.ModelYear', $year)
+                    ->orwhere('v.StartYear', $year)
+                    ->orWhere('v.EndYear', $year)
                     ->orWhere(function (Builder $range) use ($year): void {
-                        $range->whereNotNull('StartYear')
-                            ->where('StartYear', '>=', $year)
+                        $range->whereNotNull('v.StartYear')
+                            ->where('v.StartYear', '<=', $year)
                             ->where(function (Builder $end) use ($year): void {
-                                $end->whereNull('EndYear')
-                                    ->orWhere('EndYear', '<=', $year);
+                                $end->whereNull('v.EndYear')
+                                    ->orWhere('v.EndYear', '>=', $year);
                             });
                     });
             });
