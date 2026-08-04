@@ -5,7 +5,7 @@ info:
   version: 1.0.0
 servers:
   -
-    url: 'https://localhost:8000'
+    url: 'http://localhost:8000'
     description: 'Local development server'
 paths:
   /api/auth/login:
@@ -212,6 +212,32 @@ paths:
           xsrfHeader: []
         -
           bearerToken: []
+  '/api/verdicts/car/{guid}':
+    get:
+      tags:
+        - Verdicts
+      summary: 'Return verdict data for a specific car GUID.'
+      operationId: 08e2f6f93bc6b0d69e3b4547f6501b91
+      parameters:
+        -
+          name: guid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: 'Car verdict object.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScottyVerdictObjectResponse'
+        404:
+          description: 'Car not found.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/verdicts/top-best:
     get:
       tags:
@@ -580,6 +606,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ScottyCarObject'
+      type: object
+    ScottyVerdictObjectResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/ScottyCarObject'
       type: object
     ScottyVerdictPaginatedResponse:
       properties:
